@@ -142,7 +142,19 @@ func _create_default_logger(external_sink: ExternalSink) -> void:
 
 
 func _flush_external_sinks() -> void:
-	pass
+	"""Flush non-empty buffers."""
+	var processed_external_sinks := []
+	var external_sink: ExternalSink = _default.get_external_sink()
+	if external_sink:
+		external_sink.flush_buffer()
+		processed_external_sinks.push_back(external_sink)
+	for logger_ in _loggers.values():
+		var logger := logger_ as Logger
+		external_sink = logger.get_external_sink()
+		if not external_sink or external_sink in processed_external_sinks:
+			continue
+		external_sink.flush_buffer()
+		processed_external_sinks.push_back(external_sink)
 
 
 func set_default_output_level(new_value: int) -> void:
