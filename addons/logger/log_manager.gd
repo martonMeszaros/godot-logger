@@ -37,7 +37,7 @@ func _init() -> void:
 	var default_external_sink: ExternalSink = add_external_sink({
 		"type": "LogFile",
 	})
-	_create_default_logger()
+	_create_default_logger(default_external_sink)
 
 
 func _exit_tree() -> void:
@@ -67,11 +67,12 @@ func get_external_sink(p_name: String) -> ExternalSink:
 
 func add_logger(p_name: String, output_level: int = default_output_level,
 		output_strategies: Array = default_output_strategies, output_format: String = default_output_format,
-		time_format: String = default_time_format, external_sink: ExternalSink = null) -> Logger:
+		time_format: String = default_time_format, external_sink: ExternalSink = _default.get_external_sink()) -> Logger:
 	if p_name in _loggers:
-		_built_in.info("The logger '%s' already exists; discarding the call to add it anew." % p_name)
+		_built_in.info("Logger '%s' already exists; discarding the call to add it anew." % p_name)
 	else:
-		pass
+		_loggers[p_name] = Logger.new(p_name, output_level, output_strategies,
+				output_format, time_format, external_sink)
 	return _loggers[p_name]
 
 
@@ -96,6 +97,40 @@ func get_filepath_datetime(time_format: String) -> String:
 	var result: String = _built_in.get_formatted_datetime()
 	_built_in.time_format = original_time_format
 	return result
+
+
+func sanitize_output_strategies_parameter(strategies, logger: Logger = _built_in) -> Array:
+	var result := []
+	if typeof(strategies) == TYPE_ARRAY:
+		var array_size: int = len(strategies)
+		for i in range(min(array_size, Constants.LEVELS.size())):
+			var unsanitized := strategies[i] as int
+			var sanitized: int = clamp(unsanitized, Constants.Strategy.MUTE, Constants.Strategy.PRINT_AND_EXTERNAL_SINK)
+			if sanitized != unsanitized:
+				logger.info("Trying to use out of bounds '%s' strategy; '%s' will be used instead." % [
+						unsanitized, sanitized])
+			result.push_back(sanitized)
+		if array_size < Constants.LEVELS.size():
+			logger.warn("Not enough strategies provided for each level %s; " +
+					"'%s' will be used for the undefined level(s)." % [strategies, result[0]])
+			for _i in range(array_size, Constants.LEVELS.size()):
+				result.push_back(result[0])
+	else:
+		var unsanitized := strategies as int
+		var sanitized: int = clamp(unsanitized, Constants.Strategy.MUTE, Constants.Strategy.PRINT_AND_EXTERNAL_SINK)
+		if sanitized != unsanitized:
+			logger.info("Trying to use out of bounds '%s' strategy; '%s' will be used instead." % [
+					unsanitized, sanitized])
+		result = [
+			sanitized,
+			sanitized,
+			sanitized,
+			sanitized,
+			sanitized,
+		]
+	return result
+
+
 func _create_built_in_logger() -> void:
 	pass
 
