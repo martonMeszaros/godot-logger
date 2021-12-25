@@ -3,6 +3,7 @@ extends Node
 const Constants := preload("constants.gd")
 const ExternalSink := preload("external_sink.gd")
 const ExternalSinkFactory := preload("external_sink_factory.gd")
+const LogFile := preload("logfile.gd")
 const Logger := preload("logger.gd")
 
 
@@ -33,11 +34,7 @@ func _init() -> void:
 	default_logfile_path = "user://%s.log" % ProjectSettings.get_setting("application/config/name")
 	_external_sinks = {}
 	_loggers = {}
-	_create_built_in_logger()
-	var default_external_sink: ExternalSink = add_external_sink({
-		"type": "LogFile",
-	})
-	_create_default_logger(default_external_sink)
+	_create_built_in_loggers()
 
 
 func _exit_tree() -> void:
@@ -131,14 +128,12 @@ func sanitize_output_strategies_parameter(strategies, logger: Logger = _built_in
 	return result
 
 
-func _create_built_in_logger() -> void:
+func _create_built_in_loggers() -> void:
 	_built_in = Logger.new("LogManager", default_output_level, default_output_strategies,
 			default_output_format, default_time_format, null)
-
-
-func _create_default_logger(external_sink: ExternalSink) -> void:
+	_external_sinks[default_logfile_path] = LogFile.new(default_logfile_path)
 	_default = Logger.new("main", default_output_level, default_output_strategies,
-			default_output_format, default_time_format, external_sink)
+			default_output_format, default_time_format, _external_sinks[default_logfile_path])
 
 
 func _flush_external_sinks() -> void:
