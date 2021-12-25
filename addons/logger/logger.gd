@@ -23,7 +23,7 @@ func _init(name: String, output_level: int, output_strategies: Array,
 	_external_sink = external_sink
 
 
-func get_external_sink() -> ExternalSink:
+func get_external_sink_or_null() -> ExternalSink:
 	return _external_sink
 
 
