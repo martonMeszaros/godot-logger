@@ -2,6 +2,7 @@ extends Node
 
 const Constants := preload("constants.gd")
 const ExternalSink := preload("external_sink.gd")
+const ExternalSinkFactory := preload("external_sink_factory.gd")
 const Logger := preload("logger.gd")
 
 
@@ -9,6 +10,7 @@ var default_output_level: int setget set_default_output_level
 var default_output_strategies: Array setget set_default_output_strategies
 var default_output_format: String setget set_default_output_format
 var default_time_format: String setget set_default_time_format
+var default_filepath_time_format: String
 var default_logfile_path: String setget set_default_logfile_path
 var _external_sinks: Dictionary
 var _loggers: Dictionary
@@ -27,12 +29,13 @@ func _init() -> void:
 	]
 	default_output_format = "[{TIME}] [{LVL}] [{MOD}]{ERR_MSG} {MSG}"
 	default_time_format = "hh:mm:ss"
+	default_filepath_time_format = "YYYY-MM-DD"
 	default_logfile_path = "user://%s.log" % ProjectSettings.get_setting("application/config/name")
+	_external_sinks = {}
+	_loggers = {}
 	_create_built_in_logger()
-	add_external_sink({
-		"type": "logfile",
-		"path": default_logfile_path,
-		"queue_mode": 0,
+	var default_external_sink: ExternalSink = add_external_sink({
+		"type": "LogFile",
 	})
 	_create_default_logger()
 
@@ -41,12 +44,25 @@ func _exit_tree() -> void:
 	_flush_external_sinks()
 
 
-func add_external_sink(external_sink_config: Dictionary) -> void:
-	pass
+func add_external_sink(external_sink_config: Dictionary) -> ExternalSink:
+	var factory := ExternalSinkFactory.new(default_filepath_time_format, default_logfile_path)
+	var result: ExternalSink = factory.build(external_sink_config)
+	if result.get_name() in _external_sinks:
+		# xxx: LogFile doesn't interact with it's resource until write() is called, so it's fine to discard
+		# after it's created. Other sinks might behave differently and it might be undesired to even create it
+		# if the name already exists. In that case, ExternalSinkFactory should validate config before
+		# creating the sink.
+		_built_in.info("ExternalSink '%s' already exists; discarding the call to add it anew." % result.get_name())
+		return _external_sinks[result.get_name()]
+	_external_sinks[result.get_name()] = result
+	return result
 
 
-func get_external_sink(p_name: String) -> void:
-	pass
+func get_external_sink(p_name: String) -> ExternalSink:
+	if not p_name in _external_sinks:
+		_built_in.error("The requested ExternalSink '%s' doesn't exist." % p_name)
+		return null
+	return _external_sinks[p_name]
 
 
 func add_logger(p_name: String, output_level: int = default_output_level,
@@ -68,6 +84,18 @@ func get_logger(p_name: String = "") -> Logger:
 	return _loggers[p_name]
 
 
+
+
+func warn(message, error_code: int = -1) -> void:
+	_built_in.warn(message, error_code)
+
+
+func get_filepath_datetime(time_format: String) -> String:
+	var original_time_format := _built_in.time_format
+	_built_in.time_format = time_format
+	var result: String = _built_in.get_formatted_datetime()
+	_built_in.time_format = original_time_format
+	return result
 func _create_built_in_logger() -> void:
 	pass
 

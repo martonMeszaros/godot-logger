@@ -20,6 +20,10 @@ func _init(name: String, queue_mode: int) -> void:
 	_buffer_index = 0
 
 
+func get_name() -> String:
+	return _name
+
+
 func flush_buffer() -> void:
 	"""Flush the buffer, i.e. write its contents to the target external sink."""
 	pass
