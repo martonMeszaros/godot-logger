@@ -395,15 +395,6 @@ func get_output_format():
 # Configuration loading/saving
 # ----------------------------
 
-const config_fields := {
-	default_output_level = "default_output_level",
-	default_output_strategies = "default_output_strategies",
-	default_logfile_path = "default_logfile_path",
-	max_memory_size = "max_memory_size",
-	external_sinks = "external_sinks",
-	modules = "modules"
-}
-
 
 func save_config(configfile = default_configfile_path):
 	"""Save the default configuration as well as the set of modules and
