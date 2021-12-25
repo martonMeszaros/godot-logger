@@ -144,47 +144,26 @@ func _flush_external_sinks() -> void:
 
 
 func set_default_output_level(new_value: int) -> void:
-	if new_value == default_output_level:
-		return
-	default_output_level = new_value
-	_create_default_logger()
+	var new_level: int = clamp(new_value, Constants.Level.VERBOSE, Constants.Level.ERROR)
+	if new_level != new_value:
+		_built_in.warn("Trying to assign out of bounds '%s' level; '%s' will be used." % [new_value, new_level])
+	default_output_level = new_level
+	_default.set_output_level(default_output_level)
 
 
 func set_default_output_strategies(new_value) -> void:
-	if new_value == default_output_strategies:
-		return
-	if typeof(new_value) == TYPE_ARRAY:
-		var array_size: int = len(new_value)
-		for i in range(min(array_size, Constants.LEVELS.size())):
-			default_output_strategies[i] = int(new_value[i])
-		if array_size < Constants.LEVELS.size():
-			_built_in.warn("Not enough strategies provided for each level %s; " +
-					"%s will be used for the undefined level(s)." % [new_value, new_value[0]])
-			for i in range(array_size, Constants.LEVELS.size()):
-				default_output_strategies[i] = int(new_value[0])
-	else:
-		default_output_strategies = [
-			int(new_value),
-			int(new_value),
-			int(new_value),
-			int(new_value),
-			int(new_value),
-		]
-	_create_default_logger()
+	default_output_strategies = sanitize_output_strategies_parameter(new_value)
+	_default.set_output_strategies(default_output_strategies)
 
 
 func set_default_output_format(new_value: String) -> void:
-	if new_value == default_output_format:
-		return
 	default_output_format = new_value
-	_create_default_logger()
+	_default.set_output_format(default_output_format)
 
 
 func set_default_time_format(new_value: String) -> void:
-	if new_value == default_time_format:
-		return
 	default_time_format = new_value
-	_create_default_logger()
+	_default.time_format = default_time_format
 
 
 func set_default_logfile_path(new_value: String, keep_old: bool = false) -> void:
@@ -192,4 +171,7 @@ func set_default_logfile_path(new_value: String, keep_old: bool = false) -> void
 		return
 	default_logfile_path = new_value
 	if not keep_old:
-		_create_default_logger()
+		var external_sink: ExternalSink = add_external_sink({
+			"type": "LogFile",
+		})
+		_default.set_external_sink(external_sink)
