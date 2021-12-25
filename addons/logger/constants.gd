@@ -5,7 +5,7 @@ enum Level {
 	VERBOSE = 0,
 	DEBUG = 1,
 	INFO = 2,
-	WARNING = 3,
+	WARN = 3,
 	ERROR = 4,
 }
 
@@ -21,6 +21,6 @@ const LEVELS := [
 	"VERBOSE",
 	"DEBUG",
 	"INFO",
-	"WARNING",
+	"WARN",
 	"ERROR",
 ]

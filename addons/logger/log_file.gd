@@ -37,7 +37,7 @@ func write(output: String, level: int) -> void:
 	the queue mode."""
 	var queue_action = _queue_mode
 	if queue_action == QUEUE_MODE.SMART:
-		if level >= Level.WARNING:  # Don't queue warnings and errors
+		if level >= Level.WARN:  # Don't queue warnings and errors
 			queue_action = QUEUE_MODE.NONE
 			flush_buffer()
 		else:  # Queue the log, not important enough for "smart"
