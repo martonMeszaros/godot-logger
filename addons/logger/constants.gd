@@ -14,7 +14,6 @@ enum Strategy {
 	PRINT = 1,
 	EXTERNAL_SINK = 2,
 	PRINT_AND_EXTERNAL_SINK = 3,
-	MEMORY = 4,
 }
 
 const LEVELS := [

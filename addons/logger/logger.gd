@@ -116,14 +116,6 @@ var time_format = "hh:mm:ss"
 # Holds the name of the debug module for easy usage across all logging functions.
 var default_module_name = "main"
 
-# Specific to STRATEGY_MEMORY
-var max_memory_size = 30
-var memory_buffer = []
-var memory_idx = 0
-var memory_first_loop = true
-var memory_cache = []
-var invalid_memory_cache = false
-
 # Holds default and custom modules and external sinks defined by the user
 # Default modules are initialized in _init via add_module
 var external_sinks = {}
@@ -391,74 +383,13 @@ func get_output_format():
 	return output_format
 
 
-# Strategy "memory"
-# -----------------
 
 
-func set_max_memory_size(new_size):
-	"""Set the maximum amount of messages to be remembered when
-	using the STRATEGY_MEMORY output strategy."""
-	if new_size <= 0:
-		error("The maximum amount of remembered messages must be a positive non-null integer. Received %d." % new_size, PLUGIN_NAME)
-		return
 
-	var new_buffer = []
-	var new_idx = 0
-	new_buffer.resize(new_size)
 
-	# Better algorithm welcome :D
-	if memory_first_loop:
-		var offset = 0
-		if memory_idx > new_size:
-			offset = memory_idx - new_size
-			memory_first_loop = false
-		else:
-			new_idx = memory_idx
-		for i in range(0, min(memory_idx, new_size)):
-			new_buffer[i] = memory_buffer[i + offset]
 	else:
-		var delta = 0
-		if max_memory_size > new_size:
-			delta = max_memory_size - new_size
-		else:
-			new_idx = max_memory_size
-			memory_first_loop = true
-		for i in range(0, min(max_memory_size, new_size)):
-			new_buffer[i] = memory_buffer[(memory_idx + delta + i) % max_memory_size]
-
-	memory_buffer = new_buffer
-	memory_idx = new_idx
-	invalid_memory_cache = true
-	max_memory_size = new_size
-	info("Successfully set the maximum amount of remembered messages to %d." % max_memory_size, PLUGIN_NAME)
 
 
-func get_max_memory_size():
-	"""Get the maximum amount of messages to be remembered when
-	using the STRATEGY_MEMORY output strategy."""
-	return max_memory_size
-
-
-func get_memory():
-	"""Get an array of the messages remembered following STRATEGY_MEMORY.
-	The messages are sorted from the oldest to the newest."""
-	if invalid_memory_cache:  # Need to recreate the cached ordered array
-		memory_cache = []
-		if not memory_first_loop:  # else those would be uninitialized
-			for i in range(memory_idx, max_memory_size):
-				memory_cache.append(memory_buffer[i])
-		for i in range(0, memory_idx):
-			memory_cache.append(memory_buffer[i])
-		invalid_memory_cache = false
-	return memory_cache
-
-
-func clear_memory():
-	"""Clear the buffer or remembered messages."""
-	memory_buffer.clear()
-	memory_idx = 0
-	memory_first_loop = true
-	invalid_memory_cache = true
 
 
 # Configuration loading/saving
