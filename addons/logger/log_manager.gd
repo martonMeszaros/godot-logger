@@ -132,11 +132,13 @@ func sanitize_output_strategies_parameter(strategies, logger: Logger = _built_in
 
 
 func _create_built_in_logger() -> void:
-	pass
+	_built_in = Logger.new("LogManager", default_output_level, default_output_strategies,
+			default_output_format, default_time_format, null)
 
 
-func _create_default_logger() -> void:
-	pass
+func _create_default_logger(external_sink: ExternalSink) -> void:
+	_default = Logger.new("main", default_output_level, default_output_strategies,
+			default_output_format, default_time_format, external_sink)
 
 
 func _flush_external_sinks() -> void:
