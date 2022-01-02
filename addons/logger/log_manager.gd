@@ -42,7 +42,9 @@ func _exit_tree() -> void:
 
 
 func add_external_sink(external_sink_config: Dictionary) -> ExternalSink:
-	var factory := ExternalSinkFactory.new(default_filepath_time_format, default_logfile_path)
+	var factory := ExternalSinkFactory.new(
+			funcref(_built_in, "warn"), funcref(self, "get_filepath_datetime"),
+			default_logfile_path, default_filepath_time_format)
 	var result: ExternalSink = factory.build(external_sink_config)
 	if result.get_name() in _external_sinks:
 		# xxx: LogFile doesn't interact with it's resource until write() is called, so it's fine to discard
@@ -88,43 +90,11 @@ func warn(message, error_code: int = -1) -> void:
 	_built_in.warn(message, error_code)
 
 
-func get_filepath_datetime(time_format: String) -> String:
+func get_filepath_datetime(datetime: Dictionary, time_format: String) -> String:
 	var original_time_format := _built_in.time_format
 	_built_in.time_format = time_format
-	var result: String = _built_in.get_formatted_datetime()
+	var result: String = _built_in.get_formatted_datetime(datetime)
 	_built_in.time_format = original_time_format
-	return result
-
-
-func sanitize_output_strategies_parameter(strategies, logger: Logger = _built_in) -> Array:
-	var result := []
-	if typeof(strategies) == TYPE_ARRAY:
-		var array_size: int = len(strategies)
-		for i in range(min(array_size, Constants.LEVELS.size())):
-			var unsanitized := strategies[i] as int
-			var sanitized: int = clamp(unsanitized, Constants.Strategy.MUTE, Constants.Strategy.PRINT_AND_EXTERNAL_SINK)
-			if sanitized != unsanitized:
-				logger.info("Trying to use out of bounds '%s' strategy; '%s' will be used instead." % [
-						unsanitized, sanitized])
-			result.push_back(sanitized)
-		if array_size < Constants.LEVELS.size():
-			logger.warn("Not enough strategies provided for each level %s; " +
-					"'%s' will be used for the undefined level(s)." % [strategies, result[0]])
-			for _i in range(array_size, Constants.LEVELS.size()):
-				result.push_back(result[0])
-	else:
-		var unsanitized := strategies as int
-		var sanitized: int = clamp(unsanitized, Constants.Strategy.MUTE, Constants.Strategy.PRINT_AND_EXTERNAL_SINK)
-		if sanitized != unsanitized:
-			logger.info("Trying to use out of bounds '%s' strategy; '%s' will be used instead." % [
-					unsanitized, sanitized])
-		result = [
-			sanitized,
-			sanitized,
-			sanitized,
-			sanitized,
-			sanitized,
-		]
 	return result
 
 
@@ -161,7 +131,7 @@ func set_default_output_level(new_value: int) -> void:
 
 
 func set_default_output_strategies(new_value) -> void:
-	default_output_strategies = sanitize_output_strategies_parameter(new_value)
+	default_output_strategies = _built_in.sanitize_output_strategies_parameter(new_value)
 	_default.set_output_strategies(default_output_strategies)
 
 

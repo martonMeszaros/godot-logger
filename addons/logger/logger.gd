@@ -13,11 +13,11 @@ var _output_format: String
 var _external_sink: ExternalSink
 
 
-func _init(name: String, output_level: int, output_strategies: Array,
+func _init(name: String, output_level: int, output_strategies,
 		output_format: String, p_time_format: String, external_sink: ExternalSink) -> void:
 	_name = name
 	_output_level = output_level
-	_output_strategies = output_strategies
+	_output_strategies = sanitize_output_strategies_parameter(output_strategies)
 	_output_format = output_format
 	time_format = p_time_format
 	_external_sink = external_sink
@@ -34,8 +34,7 @@ func get_external_sink_or_null() -> ExternalSink:
 # * hh = Hour
 # * mm = Minutes
 # * ss = Seconds
-func get_formatted_datetime() -> String:
-	var datetime: Dictionary = OS.get_datetime()
+func get_formatted_datetime(datetime: Dictionary = OS.get_datetime()) -> String:
 	var result := time_format
 	result = result.replace("YYYY", "%04d" % [datetime.year])
 	result = result.replace("MM", "%02d" % [datetime.month])
@@ -69,6 +68,38 @@ func warn(message, error_code: int = -1):
 func error(message, error_code: int = -1):
 	"""Log a message in the given module with level ERROR."""
 	_put(Constants.Level.ERROR, message, error_code)
+
+
+func sanitize_output_strategies_parameter(strategies) -> Array:
+	var result := []
+	if typeof(strategies) == TYPE_ARRAY:
+		var array_size: int = len(strategies)
+		for i in range(min(array_size, Constants.LEVELS.size())):
+			var unsanitized := strategies[i] as int
+			var sanitized: int = clamp(unsanitized, Constants.Strategy.MUTE, Constants.Strategy.PRINT_AND_EXTERNAL_SINK)
+			if sanitized != unsanitized:
+				info("Trying to use out of bounds '%s' strategy; '%s' will be used instead." % [
+						unsanitized, sanitized])
+			result.push_back(sanitized)
+		if array_size < Constants.LEVELS.size():
+			warn("Not enough strategies provided for each level %s; " +
+					"'%s' will be used for the undefined level(s)." % [strategies, result[0]])
+			for _i in range(array_size, Constants.LEVELS.size()):
+				result.push_back(result[0])
+	else:
+		var unsanitized := strategies as int
+		var sanitized: int = clamp(unsanitized, Constants.Strategy.MUTE, Constants.Strategy.PRINT_AND_EXTERNAL_SINK)
+		if sanitized != unsanitized:
+			info("Trying to use out of bounds '%s' strategy; '%s' will be used instead." % [
+					unsanitized, sanitized])
+		result = [
+			sanitized,
+			sanitized,
+			sanitized,
+			sanitized,
+			sanitized,
+		]
+	return result
 
 
 func _put(level: int, message, error_code: int) -> void:
@@ -109,7 +140,7 @@ func set_output_level(new_value: int) -> void:
 
 
 func set_output_strategies(new_value) -> void:
-	_output_strategies = LogManager.sanitize_output_strategies_parameter(new_value, self)
+	_output_strategies = sanitize_output_strategies_parameter(new_value)
 
 
 func set_output_format(new_value: String) -> void:
