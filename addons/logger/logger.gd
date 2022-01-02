@@ -23,6 +23,10 @@ func _init(name: String, output_level: int, output_strategies,
 	_external_sink = external_sink
 
 
+func get_name() -> String:
+	return _name
+
+
 func get_external_sink_or_null() -> ExternalSink:
 	return _external_sink
 

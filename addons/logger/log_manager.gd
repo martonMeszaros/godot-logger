@@ -85,10 +85,87 @@ func get_logger(p_name: String = "") -> Logger:
 	return _loggers[p_name]
 
 
+func load_config(config_filepath: String) -> int:
+	"""Load the configuration as well as the set of defined modules and
+	their respective configurations. The expect file contents must be those
+	produced by the ConfigFile API.
+	Returns an error code (OK or some ERR_*)."""
+	# Look for the file
+	var directory = Directory.new()
+	if not directory.file_exists(config_filepath):
+		_built_in.warn("Could not load the config in '%s', the file does not exist." % config_filepath)
+		return ERR_FILE_NOT_FOUND
+
+	# Load its contents
+	var config = ConfigFile.new()
+	var error = config.load(config_filepath)
+	if error:
+		_built_in.warn("Could not load the config in '%s'; exited with error %d." % [config_filepath, error])
+		return error
+	
+	return load_from_config(config, config_filepath)
 
 
-func warn(message, error_code: int = -1) -> void:
-	_built_in.warn(message, error_code)
+func load_from_config(config: ConfigFile, config_filepath: String) -> int:
+	self.default_output_level = config.get_value("logger",
+			Constants.CONFIG_FIELDS.default_output_level, default_output_level)
+	self.default_output_strategies = config.get_value("logger",
+			Constants.CONFIG_FIELDS.default_output_strategies, default_output_strategies)
+	self.default_output_format = config.get_value("logger",
+			Constants.CONFIG_FIELDS.default_output_format, default_output_format)
+	self.default_time_format = config.get_value("logger",
+			Constants.CONFIG_FIELDS.default_time_format, default_time_format)
+	self.default_filepath_time_format = config.get_value("logger",
+			Constants.CONFIG_FIELDS.default_filepath_time_format, default_filepath_time_format)
+	var original_default_logfile_path := default_logfile_path
+	var new_default_logfile_path: String = config.get_value("logger",
+			Constants.CONFIG_FIELDS.default_logfile_path, default_logfile_path)
+	if new_default_logfile_path != original_default_logfile_path:
+		self.default_logfile_path = new_default_logfile_path
+	
+	var datetime: Dictionary = OS.get_datetime()
+	
+	var factory := ExternalSinkFactory.new(
+			funcref(_built_in, "warn"), funcref(self, "get_filepath_datetime"),
+			default_logfile_path, default_filepath_time_format)
+	for external_sink_config_ in config.get_value("logger", Constants.CONFIG_FIELDS.external_sinks, []):
+		var external_sink_config := external_sink_config_ as Dictionary
+		var external_sink: ExternalSink = factory.build(external_sink_config, datetime)
+		if external_sink.get_name() in _external_sinks:
+			_built_in.warn("ExternalSink '%s' already exists; overriding from config." % external_sink.get_name())
+		_external_sinks[external_sink.get_name()] = external_sink
+	
+	for logger_config_ in config.get_value("logger", Constants.CONFIG_FIELDS.loggers, []):
+		"""Example config:
+		{
+			"name": "MyLogger",
+			"output_level": 2,
+			"output_strategies": [3, 3, 3, 3, 3],
+			"output_format": "[{TIME}] [{LVL}] [{MOD}]{ERR_MSG} {MSG}",
+			"time_format": "hh:mm:ss",
+			"external_sink": "user://path/to/log_{TIME}.log",
+			"external_sink_time_format": "DD_hh-mm-ss",
+		}
+		"""
+		var logger_config := logger_config_ as Dictionary
+		var external_sink_time_format: String = logger_config.get(
+				"external_sink_time_format", default_filepath_time_format)
+		var external_sink_name: String = logger_config.get("external_sink", "")
+		external_sink_name = external_sink_name.replace(Constants.FORMAT_IDS.time,
+				get_filepath_datetime(datetime, external_sink_time_format))
+		var logger := Logger.new(
+				logger_config.get("name", ""),
+				logger_config.get("output_level", default_output_level),
+				logger_config.get("output_strategies", default_output_strategies),
+				logger_config.get("output_format", default_output_format),
+				logger_config.get("time_format", default_time_format),
+				get_external_sink_or_null(external_sink_name))
+		if logger.get_name() in _loggers:
+			_built_in.warn("Logger '%s' already exists; overriding from config." % logger.get_name())
+		_loggers[logger.get_name()] = logger
+	
+	_built_in.info("Successfully loaded the config from '%s'." % config_filepath)
+	return OK
 
 
 func get_filepath_datetime(datetime: Dictionary, time_format: String) -> String:
