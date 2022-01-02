@@ -88,11 +88,13 @@ const ERROR_MESSAGES = {
 	ERR_PRINTER_ON_FIRE: "Printer on fire error.",
 }
 
-const config_fields := {
+const CONFIG_FIELDS := {
 	default_output_level = "default_output_level",
 	default_output_strategies = "default_output_strategies",
+	default_output_format = "default_output_format",
+	default_time_format = "default_time_format",
+	default_filepath_time_format = "default_filepath_time_format",
 	default_logfile_path = "default_logfile_path",
-	max_memory_size = "max_memory_size",
 	external_sinks = "external_sinks",
-	modules = "modules"
+	loggers = "loggers"
 }

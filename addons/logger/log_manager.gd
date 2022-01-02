@@ -59,14 +59,15 @@ func add_external_sink(external_sink_config: Dictionary) -> ExternalSink:
 
 func get_external_sink_or_null(p_name: String) -> ExternalSink:
 	if not p_name in _external_sinks:
-		_built_in.error("The requested ExternalSink '%s' doesn't exist." % p_name)
+		_built_in.warn("The requested ExternalSink '%s' doesn't exist." % p_name)
 		return null
 	return _external_sinks[p_name]
 
 
 func add_logger(p_name: String, output_level: int = default_output_level,
-		output_strategies: Array = default_output_strategies, output_format: String = default_output_format,
-		time_format: String = default_time_format, external_sink: ExternalSink = _default.get_external_sink_or_null()) -> Logger:
+		output_strategies: Array = default_output_strategies,
+		output_format: String = default_output_format, time_format: String = default_time_format,
+		external_sink: ExternalSink = _default.get_external_sink_or_null()) -> Logger:
 	if p_name in _loggers:
 		_built_in.info("Logger '%s' already exists; discarding the call to add it anew." % p_name)
 	else:
@@ -99,7 +100,7 @@ func get_filepath_datetime(datetime: Dictionary, time_format: String) -> String:
 
 
 func _create_built_in_loggers() -> void:
-	_built_in = Logger.new("LogManager", default_output_level, default_output_strategies,
+	_built_in = Logger.new("logger", default_output_level, default_output_strategies,
 			default_output_format, default_time_format, null)
 	_external_sinks[default_logfile_path] = LogFile.new(default_logfile_path)
 	_default = Logger.new("main", default_output_level, default_output_strategies,
