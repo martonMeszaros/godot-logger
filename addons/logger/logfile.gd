@@ -9,17 +9,25 @@ const _ERROR_MESSAGE_TEMPLATE := "[ERROR] [logger] Could not open the '%s' log f
 
 var _path: String
 var _file: File
+var _mutex: Mutex
 
 
 func _init(path: String, queue_mode: int = QUEUE_MODE.NONE).(path, queue_mode) -> void:
 	_path = path
 	_file = File.new()
+	_mutex = Mutex.new()
 	_buffer.resize(_FILE_BUFFER_SIZE)
 	assert(_path.is_abs_path() or _path.is_rel_path(), "Incorrect filepath '%s'." % _path)
 
 
 func flush_buffer() -> void:
 	"""Flush the buffer, i.e. write its contents to the target file."""
+	# xxx: This method operates on _file, so lock guarding sould be required, but in theory,
+	# it will only be called in safe circumstances:
+	# a) wirte() locks the mutex,
+	# b) LogManager._exit_tree() is only called once mostly everything else has been removed
+	# from the scene tree, and any potetial threads should have been joined.
+	# Take care in case another threaded global node gets deleted after this if it uses the logger.
 	if _buffer_index == 0:
 		return  # Nothing to write
 	var error: int = _open_file()
@@ -35,6 +43,7 @@ func flush_buffer() -> void:
 func write(output: String, level: int) -> void:
 	"""Write the string at the end of the file (append mode), following
 	the queue mode."""
+	_mutex.lock()
 	var queue_action = _queue_mode
 	if queue_action == QUEUE_MODE.SMART:
 		if level >= Level.WARN:  # Don't queue warnings and errors
@@ -46,6 +55,7 @@ func write(output: String, level: int) -> void:
 	if queue_action == QUEUE_MODE.NONE:
 		var error: int = _open_file()
 		if error:
+			_mutex.unlock()
 			return
 		_file.seek_end()
 		_file.store_line(output)
@@ -56,6 +66,7 @@ func write(output: String, level: int) -> void:
 		_buffer_index += 1
 		if _buffer_index >= _FILE_BUFFER_SIZE:
 			flush_buffer()
+	_mutex.unlock()
 
 
 func _open_file() -> int:
